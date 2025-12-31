@@ -14,39 +14,35 @@ while 1:
     print(f"Received a connection from:{addr}")
     message = connectionsocket.recv(1024).decode()
 
-    print(message)
-    print(message.split()[1])
+   
     filename = message.split()[1].partition("/")[2]
-    print(filename)
+  
     fileExist="false"
     filetouse="/"+filename
-    print(filetouse)
     try:
         f = open(filename,"rb")
         outputdata = f.read()
+        f.close()
         fileExist = "true"
-        connectionsocket.send(b"HTTP/1.0 200 OK \r\n")
-        connectionsocket.send(b"Content-Type:text/html\r\n")
-        connectionsocket.send(outputdata+b'\r\n')
+        connectionsocket.send(b"HTTP/1.1 200 OK \r\n\r\n"+outputdata)
+        connectionsocket.send("\r\n".encode())
         connectionsocket.close()
-
         print('Read from cache')
 
     except IOError:
         if fileExist =="false":
             c = socket(AF_INET, SOCK_STREAM)
-            hostn = filename.replace("www.","",1)
-            print(hostn)
+           
             try:
-                c.connect((hostn, 80))
-                fileobj = c.makefile('r', 80)
-                fileobj.write("GET http://"+filename+"HTTP/1.0\r\n")
-                buffer = fileobj.readlines()
-                tempfile = open("./"+filename,"wb")
-                for i in buffer:
-                    tempfile.write(i)
-                    connectionsocket.send(i)
-                    c.close()
+                c.connect(("localhost", 8000))
+                request = f"GET /{filename} HTTP/1.0\r\n Host:localhost\r\n\r\n"
+                c.send(request.encode())
+                response = c.recv(1024)
+                with open(filename, "wb") as tempfile:
+
+                    tempfile.write(response)
+                connectionsocket.send(response)
+                c.close()
             except:
                 print("Illegal request")
                 c.close()
